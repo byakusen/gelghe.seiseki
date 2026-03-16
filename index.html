@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>成績入力管理アプリ</title>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/competti.browser.min.js"></script>
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --primary-color: #6c5ce7;
+            --accent-color: #a29bfe;
+            --text-color: #2d3436;
+        }
+
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+            overflow: hidden;
+        }
+
+        .app-container {
+            width: 95%;
+            max-width: 1100px;
+            height: 90vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* タブスタイルの追加 */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--glass-border);
+            padding-bottom: 5px;
+        }
+
+        .tab-btn {
+            padding: 10px 25px;
+            border: none;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 12px 12px 0 0;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 -4px 10px rgba(108, 92, 231, 0.2);
+        }
+
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .btn-copy { background: var(--primary-color); color: white; }
+        .btn-reset { background: #ff7675; color: white; }
+        .btn-auth { background: white; color: var(--primary-color); border: 1px solid var(--primary-color); }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); filter: brightness(1.1); }
+        .btn:active { transform: translateY(0); }
+
+        .table-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .nav-btn {
+            background: white;
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--primary-color);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .term-select {
+            padding: 8px 20px;
+            border-radius: 15px;
+            border: none;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: white;
+            background: #27ae60;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .term-select:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(39, 174, 96, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .table-wrapper {
+            flex-grow: 1;
+            overflow: auto;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0,0,0,0.05);
+            touch-action: none; 
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            background: white;
+        }
+
+        th, td {
+            border: 1px solid #dfe6e9;
+            padding: 0;
+            height: 40px;
+            text-align: center;
+        }
+
+        th {
+            background: #f1f2f6;
+            font-size: 0.8rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .col-id { width: 8px; } /* A列と同じ8pxへ修正 */
+        .col-a { width: 8px; } 
+        .col-b { width: 32px; } /* スコア列16pxの2倍の32pxへ修正 */
+        .col-score { width: 16px; } /* パソコンで16pxへ修正 */
+
+        input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            padding: 0 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 0.9rem;
+            background: transparent;
+            outline: none;
+            text-align: center;
+        }
+
+        input:focus {
+            background: rgba(108, 92, 231, 0.1);
+            box-shadow: inset 0 0 0 2px var(--primary-color);
+        }
+
+        /* セル強調 */
+        .header-row { background: #f9f9f9; }
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: #f1f2f6;
+            z-index: 5;
+        }
+
+        /* 選択中のスタイル */
+        .input-cell.selected {
+            background-color: rgba(108, 92, 231, 0.15) !important;
+            box-shadow: inset 0 0 0 1px var(--primary-color);
+        }
+        table.selecting {
+            user-select: none;
+        }
+
+        .status-msg {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(45, 52, 54, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: none;
+            z-index: 100;
+        }
+
+        /* 設定タブ内のスタイル */
+        .settings-pane {
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+        }
+
+        .settings-select {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            font-family: inherit;
+            font-size: 1.3rem;
+            outline: none;
+            width: 220px;
+        }
+
+        /* 分類（教科配点）用スタイル */
+        .subject-settings-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .subject-card {
+            background: #f8f9fa;
+            border: 1px solid #dfe6e9;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .subject-card h4 {
+            margin: 0 0 10px 0;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 4px;
+        }
+
+        .score-input-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .score-input-row label {
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+
+        .score-input {
+            width: 60px;
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            text-align: right;
+            font-family: inherit;
+        }
+
+        /* ログインモーダルのスタイル */
+        #authModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            padding: 30px;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .modal-content input {
+            background: white;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 12px;
+            height: auto;
+        }
+
+        .modal-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .app-container { width: 98%; padding: 10px; }
+            .header h1 { font-size: 1.2rem; }
+            .col-b { width: 44px; } /* スマホ表示用は現状維持 */
+            .col-score { width: 26px; } /* スマホ表示用は現状維持 */
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="tabs">
+        <button class="tab-btn" onclick="switchTab('settings')">設定</button>
+        <button class="tab-btn active" onclick="switchTab('entry')">テスト入力</button>
+    </div>
+
+    <div id="tab-settings" class="tab-content">
+        <div class="settings-pane">
+            <h2>アプリ設定</h2>
+            <div class="form-group">
+                <label for="gradeSelector">学年設定</label>
+                <select id="gradeSelector" class="settings-select">
+                    <option value="1">1年生</option>
+                    <option value="2">2年生</option>
+                    <option value="3">3年生</option>
+                    <option value="4">4年生</option>
+                    <option value="5">5年生</option>
+                    <option value="6">6年生</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>分類（教科別配点設定）</label>
+                <div id="subjectSettingsList" class="subject-settings-container">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-entry" class="tab-content active">
+        <div class="header">
+            <h1>成績管理シート</h1>
+            <div class="toolbar">
+                <button id="authBtn" class="btn btn-auth" onclick="toggleAuthModal()">🔑 ログイン</button>
+                <button class="btn btn-copy" onclick="copyTableData()">📋 スプレッドシート用にコピー</button>
+                <button class="btn btn-reset" onclick="resetApp()">🔄 リセット</button>
+            </div>
+        </div>
+
+        <div class="table-controls">
+            <button id="prevBtn" class="nav-btn" onclick="moveColumns(-1)" title="左に移動">←</button>
+            <span id="colRangeInfo" style="font-weight: bold; color: var(--primary-color);">C〜H列を表示中</span>
+            <select id="termSelector" class="term-select">
+                <option>1学期</option>
+                <option>2学期</option>
+                <option>3学期</option>
+            </select>
+            <button id="nextBtn" class="nav-btn" onclick="moveColumns(1)" title="右に移動">→</button>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="gradeTable">
+                <thead>
+                    <tr id="headerRow" class="header-row">
+                        </tr>
+                </thead>
+                <tbody id="tableBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="authModal">
+    <div class="modal-content">
+        <h2 id="modalTitle">ログイン / 新規登録</h2>
+        <input type="email" id="emailInput" placeholder="メールアドレス">
+        <input type="password" id="passwordInput" placeholder="パスワード（6文字以上）">
+        <div class="modal-btn-group">
+            <button class="btn btn-copy" onclick="handleEmailLogin()">ログイン</button>
+            <button class="btn btn-auth" onclick="handleEmailRegister()">新規登録</button>
+            <button class="btn btn-reset" style="background:#636e72" onclick="toggleAuthModal()">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<div id="statusMsg" class="status-msg">コピーしました！</div>
+
+<audio id="soundCorrect" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
+<audio id="soundError" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3"></audio>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'seiseki-itiranhyo-app';
+
+    const tableBody = document.getElementById('tableBody');
+    const headerRow = document.getElementById('headerRow');
+    const statusMsg = document.getElementById('statusMsg');
+    const soundCorrect = document.getElementById('soundCorrect');
+    const termSelector = document.getElementById('termSelector');
+    const gradeSelector = document.getElementById('gradeSelector');
+    const subjectSettingsList = document.getElementById('subjectSettingsList');
+    
+    const studentCount = 40; 
+    const headerRowsCount = 3; // 分類、タイトル、配点の3行
+    const rowCount = studentCount + headerRowsCount + 2; // 44行目（平均点）と45行目（合算平均）を追加
+    
+    // 表示管理
+    let startColIdx = 2; // C列から開始 (0=A, 1=B, 2=C)
+    const visibleColsCount = 6; // C〜Hの6列分を表示するように修正
+    const totalCols = 200; // Z列を超えてFZ列以上まで対応
+
+    // 範囲選択用の状態
+    let isSelecting = false;
+    let startCell = null;
+    let endCell = null;
+
+    // データ保存用 (リロードや列移動で消えないように保持)
+    let cellDataStorage = {};
+    let manualEditFlags = {}; // 手動で上書きされたセルの記録
+    let lastUser = null;
+    let isLocalUpdate = false;
+    let unsubscribeSnapshot = null;
+
+    // 分類・配点設定
+    let subjectSettings = {
+        "国語": { "知識": "100", "思考": "100" },
+        "社会": { "知識": "100", "思考": "50" },
+        "算数": { "知識": "100", "思考": "50" },
+        "理科": { "知識": "100", "思考": "50" },
+        "生活": { "知識": "100", "思考": "50" }
+    };
+
+    // タブ切り替えロジック
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+        if (tabName === 'settings') {
+            document.getElementById('tab-settings').classList.add('active');
+            document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+            renderSubjectSettings(); // タブ切り替え時に再描画
+        } else {
+            document.getElementById('tab-entry').classList.add('active');
+            document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+        }
+    }
+
+    // 教科設定UIの生成
+    function renderSubjectSettings() {
+        const grade = parseInt(gradeSelector.value);
+        let subjectsToShow = [];
+        
+        if (grade <= 2) {
+            subjectsToShow = ["国語", "算数", "生活"];
+        } else {
+            subjectsToShow = ["国語", "社会", "算数", "理科"];
+        }
+
+        subjectSettingsList.innerHTML = '';
+        subjectsToShow.forEach(sj => {
+            const card = document.createElement('div');
+            card.className = 'subject-card';
+            card.innerHTML = `
+                <h4>${sj}</h4>
+                <div class="score-input-row">
+                    <label>知識</label>
+                    <input type="number" class="score-input" data-sj="${sj}" data-asp="知識" value="${subjectSettings[sj]["知識"]}">
+                </div>
+                <div class="score-input-row">
+                    <label>思考</label>
+                    <input type="number" class="score-input" data-sj="${sj}" data-asp="思考" value="${subjectSettings[sj]["思考"]}">
+                </div>
+            `;
+            
+            // イベントリスナー
+            card.querySelectorAll('input').forEach(inp => {
+                inp.addEventListener('input', (e) => {
+                    const sj = e.target.dataset.sj;
+                    const asp = e.target.dataset.asp;
+                    subjectSettings[sj][asp] = e.target.value;
+                    autoSave();
+                });
+            });
+            
+            subjectSettingsList.appendChild(card);
+        });
+    }
+
+    // Excel形式の列名生成 (A, B... Z, AA, AB...)
+    function getColName(index) {
+        let name = "";
+        let i = index;
+        while (i >= 0) {
+            name = String.fromCharCode((i % 26) + 65) + name;
+            i = Math.floor(i / 26) - 1;
+        }
+        return name;
+    }
+
+    // 列名からインデックスを取得
+    function getColIndex(name) {
+        let res = 0;
+        for (let i = 0; i < name.length; i++) {
+            res = res * 26 + (name.charCodeAt(i) - 64);
+        }
+        return res - 1;
+    }
+
+    // 保存処理 (Debounced)
+    let saveTimeout;
+    function autoSave() {
+        if (!lastUser) return;
+        isLocalUpdate = true;
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(async () => {
+            try {
+                const stateRef = doc(db, 'artifacts', appId, 'users', lastUser.uid, 'appState', 'current');
+                await setDoc(stateRef, {
+                    cellDataStorage,
+                    manualEditFlags,
+                    startColIdx,
+                    term: termSelector.value,
+                    grade: gradeSelector.value,
+                    subjectSettings,
+                    updatedAt: new Date()
+                });
+                setTimeout(() => { isLocalUpdate = false; }, 500);
+            } catch (err) {
+                console.error("保存失敗:", err);
+                isLocalUpdate = false;
+            }
+        }, 1000);
+    }
+
+    // 平均点を再計算して表示を更新する
+    function updateAverages() {
+        const avgRow = rowCount - 1;
+        const combinedAvgRow = rowCount;
+
+        for (let j = 0; j < visibleColsCount; j++) {
+            const colIdx = startColIdx + j;
+            const colName = getColName(colIdx);
+            let sum = 0;
+            let count = 0;
+            
+            // 各列の平均点 (44行目用)
+            for (let r = headerRowsCount + 1; r <= studentCount + headerRowsCount; r++) {
+                const val = parseFloat(cellDataStorage[`${r}-${colName}`]);
+                if (!isNaN(val)) {
+                    sum += val;
+                    count++;
+                }
+            }
+            const avg = count > 0 ? (sum / count).toFixed(1) : "";
+            const avgInput = document.querySelector(`.input-cell[data-row="${avgRow}"][data-col="${colName}"]`);
+            if (avgInput) avgInput.value = avg;
+        }
+
+        // 2列合算平均 (45行目用)
+        for (let j = 0; j < visibleColsCount; j += 2) {
+            const colIdx = startColIdx + j;
+            const nextIdx = colIdx + 1;
+            const colName = getColName(colIdx);
+            const nextColName = getColName(nextIdx);
+
+            const c3 = parseFloat(cellDataStorage[`3-${colName}`]) || 0;
+            const d3 = parseFloat(cellDataStorage[`3-${nextColName}`]) || 0;
+            const avg1Input = document.querySelector(`.input-cell[data-row="${avgRow}"][data-col="${colName}"]`);
+            const avg2Input = document.querySelector(`.input-cell[data-row="${avgRow}"][data-col="${nextColName}"]`);
+
+            const combinedAvgInput = document.querySelector(`.input-cell[data-row="${combinedAvgRow}"][data-col="${colName}"]`);
+            
+            if (combinedAvgInput) {
+                const avg1 = avg1Input ? parseFloat(avg1Input.value) : NaN;
+                const avg2 = avg2Input ? parseFloat(avg2Input.value) : NaN;
+
+                if (!isNaN(avg1) && !isNaN(avg2) && (c3 + d3) > 0) {
+                    const result = (avg1 + avg2) * 100 / (c3 + d3);
+                    combinedAvgInput.value = result.toFixed(1);
+                } else {
+                    combinedAvgInput.value = "";
+                }
+            }
+        }
+    }
+
+    // 認証モーダルの開閉
+    function toggleAuthModal() {
+        const modal = document.getElementById('authModal');
+        if (lastUser && !lastUser.isAnonymous) {
+            if (confirm("ログアウトしますか？")) {
+                signOut(auth);
+            }
+        } else {
+            modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+        }
+    }
+
+    // メール登録
+    async function handleEmailRegister() {
+        const email = document.getElementById('emailInput').value;
+        const pass = document.getElementById('passwordInput').value;
+        try {
+            await createUserWithEmailAndPassword(auth, email, pass);
+            toggleAuthModal();
+            showStatus("新規登録してログインしました");
+        } catch (err) {
+            alert("登録エラー: " + err.message);
+        }
+    }
+
+    // メールログイン
+    async function handleEmailLogin() {
+        const email = document.getElementById('emailInput').value;
+        const pass = document.getElementById('passwordInput').value;
+        try {
+            await signInWithEmailAndPassword(auth, email, pass);
+            toggleAuthModal();
+            showStatus("ログインしました");
+        } catch (err) {
+            alert("ログインエラー: " + err.message);
+        }
+    }
+
+    // テーブルの初期化
+    async function initTable() {
+        onAuthStateChanged(auth, async (u) => {
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+            
+            if (!u) {
+                await signInAnonymously(auth);
+                return;
+            }
+
+            lastUser = u;
+            const authBtn = document.getElementById('authBtn');
+            authBtn.textContent = u.isAnonymous ? "🔑 ログイン" : "🚪 ログアウト";
+
+            const stateRef = doc(db, 'artifacts', appId, 'users', u.uid, 'appState', 'current');
+            
+            // リアルタイム同期（onSnapshot）の開始
+            unsubscribeSnapshot = onSnapshot(stateRef, (snap) => {
+                if (snap.exists() && !isLocalUpdate) {
+                    const data = snap.data();
+                    cellDataStorage = data.cellDataStorage || {};
+                    manualEditFlags = data.manualEditFlags || {};
+                    startColIdx = data.startColIdx || 2;
+                    if (data.term) termSelector.value = data.term;
+                    if (data.grade) gradeSelector.value = data.grade;
+                    if (data.subjectSettings) subjectSettings = data.subjectSettings;
+                    
+                    renderSubjectSettings();
+                    renderTable();
+                } else if (!snap.exists()) {
+                    // 初期データのセットアップ
+                    cellDataStorage["1-C"] = "算数：知識";
+                    cellDataStorage["3-C"] = "100";
+                    cellDataStorage["1-D"] = "算数：思考";
+                    cellDataStorage["3-D"] = "50";
+                    renderSubjectSettings();
+                    renderTable();
+                }
+            });
+            setupSwipeGestures();
+        });
+    }
+
+    function renderTable() {
+        // ヘッダーの生成
+        headerRow.innerHTML = '<th class="col-id"></th><th class="col-a">A</th><th class="col-b">B</th>';
+        // B列とC列の間の赤線
+        headerRow.children[2].style.borderRight = "2px solid red";
+
+        for (let i = 0; i < visibleColsCount; i++) {
+            const colIdx = startColIdx + i;
+            const th = document.createElement('th');
+            th.className = 'col-score';
+            th.textContent = getColName(colIdx);
+            if (colIdx % 2 !== 0) {
+                th.style.borderRight = "2px solid red";
+            }
+            headerRow.appendChild(th);
+        }
+
+        // ボディの生成
+        tableBody.innerHTML = '';
+        for (let i = 1; i <= rowCount; i++) {
+            const tr = document.createElement('tr');
+            
+            // 行の境界線
+            if ([3, 8, 13, 18, 23, 28, 33, 38, 43].includes(i)) {
+                tr.style.borderBottom = "2px solid black";
+            }
+
+            const tdId = document.createElement('td');
+            tdId.className = 'sticky-col col-id';
+            tdId.textContent = i;
+            // 1,2行目を固定
+            if (i <= 2) {
+                tdId.style.top = (i * 40) + "px";
+                tdId.style.zIndex = "11";
+            }
+            tr.appendChild(tdId);
+
+            if (i <= headerRowsCount) {
+                const tdMerged = document.createElement('td');
+                tdMerged.colSpan = 2;
+                tdMerged.style.borderRight = "2px solid red";
+                let val = "";
+                let cellStyle = "text-align: center; font-size: 1.35rem; font-weight: bold; color: var(--primary-color);";
+                
+                if (i === 1) val = cellDataStorage[`${i}-AB`] || "分類";
+                else if (i === 2) val = cellDataStorage[`${i}-AB`] || "タイトル";
+                else if (i === 3) {
+                    val = cellDataStorage[`${i}-AB`] || "配点設定";
+                }
+
+                // 1,2行目を固定
+                if (i <= 2) {
+                    tdMerged.style.position = 'sticky';
+                    tdMerged.style.top = (i * 40) + "px";
+                    tdMerged.style.zIndex = "8";
+                    tdMerged.style.backgroundColor = "white";
+                }
+                
+                tdMerged.innerHTML = `<input type="text" class="input-cell" data-row="${i}" data-col="AB" value="${val}" style="${cellStyle}">`;
+                tr.appendChild(tdMerged);
+            } else if (i === rowCount - 1) {
+                const tdMerged = document.createElement('td');
+                tdMerged.colSpan = 2;
+                tdMerged.style.borderRight = "2px solid red";
+                const labelStyle = "text-align: center; font-size: 1.35rem; font-weight: bold; color: blue;";
+                tdMerged.innerHTML = `<input type="text" class="input-cell" data-row="${i}" data-col="AB" value="平均点" readonly style="${labelStyle}">`;
+                tr.appendChild(tdMerged);
+            } else if (i === rowCount) {
+                const tdMerged = document.createElement('td');
+                tdMerged.colSpan = 2;
+                tdMerged.style.borderRight = "2px solid red";
+                const labelStyle = "text-align: center; font-size: 1.35rem; font-weight: bold; color: red;";
+                tdMerged.innerHTML = `<input type="text" class="input-cell" data-row="${i}" data-col="AB" value="テスト平均点" readonly style="${labelStyle}">`;
+                tr.appendChild(tdMerged);
+            } else {
+                const tdA = document.createElement('td');
+                tdA.className = 'col-a';
+                const aVal = cellDataStorage[`${i}-A`] !== undefined ? cellDataStorage[`${i}-A`] : (i - headerRowsCount);
+                tdA.innerHTML = `<input type="text" class="input-cell" data-row="${i}" data-col="A" value="${aVal}">`;
+                tr.appendChild(tdA);
+
+                const tdB = document.createElement('td');
+                tdB.className = 'col-b';
+                tdB.style.borderRight = "2px solid red";
+                const bVal = cellDataStorage[`${i}-B`] || "";
+                tdB.innerHTML = `<input type="text" class="input-cell cell-name" data-row="${i}" data-col="B" value="${bVal}" placeholder="名前を入力">`;
+                tr.appendChild(tdB);
+            }
+
+            for (let j = 0; j < visibleColsCount; j++) {
+                const colIdx = startColIdx + j;
+                const colName = getColName(colIdx);
+                const td = document.createElement('td');
+                td.className = 'col-score';
+                
+                if (colIdx % 2 !== 0) {
+                    td.style.borderRight = "2px solid red";
+                }
+
+                const dataKey = `${i}-${colName}`;
+                let defaultVal = cellDataStorage[dataKey] || "";
+                let inputStyleAttr = "";
+                let readonlyAttr = "";
+
+                if (i === 3) {
+                    inputStyleAttr = 'style="color: #ff0000; font-size: 1.2rem; font-weight: bold;"';
+                } else if (i === rowCount - 1) {
+                    inputStyleAttr = 'style="color: blue; font-size: 1.35rem; font-weight: bold;"';
+                    readonlyAttr = 'readonly';
+                } else if (i === rowCount) {
+                    if (j % 2 === 0) {
+                        td.colSpan = 2;
+                        inputStyleAttr = 'style="color: red; font-size: 1.35rem; font-weight: bold;"';
+                        readonlyAttr = 'readonly';
+                        // 修正：結合セルの右端（(colIdx + 1)列目）が赤線の位置なら線を引く
+                        if ((colIdx + 1) % 2 !== 0) {
+                            td.style.borderRight = "2px solid red";
+                        }
+                    } else {
+                        continue; 
+                    }
+                }
+
+                // 1,2行目を固定
+                if (i <= 2) {
+                    td.style.position = 'sticky';
+                    td.style.top = (i * 40) + "px";
+                    td.style.zIndex = "8";
+                    td.style.backgroundColor = "white";
+                }
+
+                // 分類行（1行目）のみプルダウンに変更
+                if (i === 1) {
+                    const grade = parseInt(gradeSelector.value);
+                    const subjects = grade <= 2 ? ["国語", "算数", "生活"] : ["国語", "社会", "算数", "理科"];
+                    let options = '<option value=""></option>';
+                    subjects.forEach(sj => {
+                        options += `<option value="${sj}：知識" ${defaultVal === sj + "：知識" ? "selected" : ""}>${sj}：知識</option>`;
+                        options += `<option value="${sj}：思考" ${defaultVal === sj + "：思考" ? "selected" : ""}>${sj}：思考</option>`;
+                    });
+                    td.innerHTML = `<select class="input-cell" data-row="${i}" data-col="${colName}" style="width: 100%; height: 100%; border: none; background: transparent; font-family: inherit; font-size: 0.8rem; text-align: center; outline: none; cursor: pointer;">${options}</select>`;
+                } else {
+                    td.innerHTML = `<input type="text" class="input-cell ${i > headerRowsCount && i < rowCount - 1 ? 'cell-score' : ''}" data-row="${i}" data-col="${colName}" value="${defaultVal}" ${inputStyleAttr} ${readonlyAttr}>`;
+                }
+                tr.appendChild(td);
+            }
+
+            tableBody.appendChild(tr);
+        }
+
+        updateNavUI();
+        attachEventListeners();
+        updateAverages();
+    }
+
+    function moveColumns(dir) {
+        const nextIdx = startColIdx + dir;
+        if (nextIdx >= 2 && nextIdx + visibleColsCount <= totalCols) {
+            startColIdx = nextIdx;
+            renderTable();
+            autoSave();
+        }
+    }
+
+    function setupSwipeGestures() {
+        const wrapper = document.querySelector('.table-wrapper');
+        let startX = 0;
+        let isDragging = false;
+        let lastMoveTime = 0;
+
+        // Trackpad / Mouse Wheel (Horizontal)
+        wrapper.addEventListener('wheel', (e) => {
+            if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                e.preventDefault();
+                const now = Date.now();
+                if (now - lastMoveTime > 300) {
+                    if (Math.abs(e.deltaX) > 10) {
+                        moveColumns(e.deltaX > 0 ? 1 : -1);
+                        lastMoveTime = now;
+                    }
+                }
+            }
+        }, { passive: false });
+
+        // Mouse Drag / Touch Swipe
+        const handleStart = (clientX) => {
+            startX = clientX;
+            isDragging = true;
+        };
+
+        const handleEnd = (clientX) => {
+            if (!isDragging) return;
+            const diff = startX - clientX;
+            if (Math.abs(diff) > 60) {
+                moveColumns(diff > 0 ? 1 : -1);
+            }
+            isDragging = false;
+        };
+
+        wrapper.addEventListener('mousedown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; 
+            handleStart(e.clientX);
+            wrapper.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            handleEnd(e.clientX);
+            wrapper.style.cursor = 'default';
+        });
+
+        wrapper.addEventListener('touchstart', (e) => {
+            if (e.target.tagName === 'SELECT') return;
+            handleStart(e.touches[0].clientX);
+        }, {passive: true});
+
+        wrapper.addEventListener('touchend', (e) => {
+            handleEnd(e.changedTouches[0].clientX);
+        }, {passive: true});
+
+        wrapper.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                window.getSelection().removeAllRanges();
+            }
+        });
+    }
+
+    function updateNavUI() {
+        document.getElementById('prevBtn').disabled = (startColIdx <= 2);
+        document.getElementById('nextBtn').disabled = (startColIdx + visibleColsCount >= totalCols);
+        const startName = getColName(startColIdx);
+        const endName = getColName(startColIdx + visibleColsCount - 1);
+        const rangeEl = document.getElementById('colRangeInfo');
+        if (rangeEl) rangeEl.textContent = `${startName}〜${endName}列を表示中`;
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.input-cell.selected').forEach(el => el.classList.remove('selected'));
+    }
+
+    function updateSelection(start, end) {
+        if (!start || !end) return;
+        clearSelection();
+        const minR = Math.min(start.r, end.r);
+        const maxR = Math.max(start.r, end.r);
+        
+        for (let r = minR; r <= maxR; r++) {
+            const target = document.querySelector(`.input-cell[data-row="${r}"][data-col="${end.c}"]`);
+            if (target) target.classList.add('selected');
+        }
+    }
+
+    function attachEventListeners() {
+        const inputs = document.querySelectorAll('.input-cell');
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', (e) => {
+                const currentRow = parseInt(input.dataset.row);
+                const currentCol = input.dataset.col;
+                const dataKey = `${currentRow}-${currentCol}`;
+                
+                cellDataStorage[dataKey] = e.target.value;
+
+                // 編集した列がスコア列なら、次回その列から開始するように設定
+                if (currentCol !== 'A' && currentCol !== 'B' && currentCol !== 'AB') {
+                    startColIdx = getColIndex(currentCol);
+                }
+
+                if (currentRow > headerRowsCount && currentRow < rowCount - 1 && input.classList.contains('cell-score')) {
+                    manualEditFlags[dataKey] = true;
+                }
+
+                if (currentRow === 1 && currentCol !== 'AB' && currentCol !== 'A' && currentCol !== 'B') {
+                    const scoreSettingInput = document.querySelector(`.input-cell[data-row="3"][data-col="${currentCol}"]`);
+                    let newVal = "";
+                    
+                    const val = e.target.value;
+                    if (val.includes('：')) {
+                        const parts = val.split('：');
+                        const sj = parts[0];
+                        const asp = parts[1];
+                        if (subjectSettings[sj] && subjectSettings[sj][asp]) {
+                            newVal = subjectSettings[sj][asp];
+                        }
+                    }
+                    
+                    if (newVal !== "") {
+                        if (scoreSettingInput) scoreSettingInput.value = newVal;
+                        cellDataStorage[`3-${currentCol}`] = newVal;
+
+                        for (let r = headerRowsCount + 1; r <= studentCount + headerRowsCount; r++) {
+                            const studentKey = `${r}-${currentCol}`;
+                            if (manualEditFlags[studentKey]) continue;
+
+                            const nameVal = cellDataStorage[`${r}-B`] || "";
+                            if (nameVal.trim() !== "") {
+                                const studentInput = document.querySelector(`.input-cell[data-row="${r}"][data-col="${currentCol}"]`);
+                                if (studentInput) studentInput.value = newVal;
+                                cellDataStorage[studentKey] = newVal;
+                            }
+                        }
+                    }
+                }
+
+                if (currentRow === 3 && currentCol !== 'AB' && currentCol !== 'A' && currentCol !== 'B') {
+                    const newVal = e.target.value;
+                    for (let r = headerRowsCount + 1; r <= studentCount + headerRowsCount; r++) {
+                        const studentKey = `${r}-${currentCol}`;
+                        if (manualEditFlags[studentKey]) continue;
+
+                        const nameVal = cellDataStorage[`${r}-B`] || "";
+                        if (nameVal.trim() !== "") {
+                            const studentInput = document.querySelector(`.input-cell[data-row="${r}"][data-col="${currentCol}"]`);
+                            if (studentInput) studentInput.value = newVal;
+                            cellDataStorage[studentKey] = newVal;
+                        }
+                    }
+                }
+
+                if (input.classList.contains('cell-name')) {
+                    const row = e.target.dataset.row;
+                    if (e.target.value.trim() !== "") {
+                        for (let cIdx = 2; cIdx < totalCols; cIdx++) {
+                            const colName = getColName(cIdx);
+                            const studentKey = `${row}-${colName}`;
+                            if (manualEditFlags[studentKey]) continue;
+
+                            const settingVal = cellDataStorage[`3-${colName}`] || "";
+                            if (settingVal !== "") {
+                                const targetScoreInput = document.querySelector(`input[data-row="${row}"][data-col="${colName}"]`);
+                                if (targetScoreInput && targetScoreInput.value === "") {
+                                    targetScoreInput.value = settingVal;
+                                    cellDataStorage[studentKey] = settingVal;
+                                }
+                            }
+                        }
+                    } else {
+                        for (let cIdx = 2; cIdx < totalCols; cIdx++) {
+                            const colName = getColName(cIdx);
+                            const studentKey = `${row}-${colName}`;
+                            const targetScoreInput = document.querySelector(`input[data-row="${row}"][data-col="${colName}"]`);
+                            if (targetScoreInput) targetScoreInput.value = "";
+                            cellDataStorage[studentKey] = "";
+                            delete manualEditFlags[studentKey];
+                        }
+                    }
+                }
+
+                updateAverages();
+                autoSave();
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (input.tagName === 'SELECT') return; 
+                const currentRow = parseInt(input.dataset.row);
+                const currentCol = input.dataset.col;
+                let nextRow = currentRow;
+                let nextCol = currentCol;
+
+                if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    nextRow++;
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    nextRow--;
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    if (currentCol === 'A') {
+                        nextCol = 'B';
+                    } else if (currentCol === 'B' || currentCol === 'AB') {
+                        nextCol = getColName(startColIdx);
+                    } else {
+                        const currentIdx = getColIndex(currentCol);
+                        const nextColName = getColName(currentIdx + 1);
+                        if (currentIdx + 1 >= startColIdx + visibleColsCount) {
+                            moveColumns(1);
+                        }
+                        nextCol = nextColName;
+                    }
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    if (currentCol === 'B') {
+                        nextCol = 'A';
+                    } else if (currentCol !== 'A' && currentCol !== 'AB') {
+                        const currentIdx = getColIndex(currentCol);
+                        if (currentIdx === startColIdx) {
+                            if (startColIdx > 2) {
+                                moveColumns(-1);
+                                nextCol = getColName(currentIdx - 1);
+                            } else {
+                                nextCol = 'B';
+                            }
+                        } else {
+                            nextCol = getColName(currentIdx - 1);
+                        }
+                    }
+                }
+
+                if (nextRow !== currentRow || nextCol !== currentCol) {
+                    const targetSelector = nextCol === 'AB' ? `.input-cell[data-row="${nextRow}"][data-col=\"AB\"]` : `.input-cell[data-row="${nextRow}"][data-col="${nextCol}"]`;
+                    const nextInput = document.querySelector(targetSelector);
+                    if (nextInput) {
+                        nextInput.focus();
+                        if (nextInput.select) nextInput.select();
+                    } else if (nextRow > rowCount) {
+                        showSuccess();
+                    }
+                }
+            });
+
+            input.addEventListener('mousedown', (e) => {
+                isSelecting = true;
+                startCell = { r: parseInt(input.dataset.row), c: input.dataset.col };
+                if (!e.shiftKey) clearSelection();
+                input.classList.add('selected');
+                const table = document.getElementById('gradeTable');
+                if (table) table.classList.add('selecting');
+            });
+
+            input.addEventListener('mouseenter', () => {
+                if (isSelecting) {
+                    updateSelection(startCell, { r: parseInt(input.dataset.row), c: input.dataset.col });
+                }
+            });
+        });
+    }
+
+    termSelector.addEventListener('change', autoSave);
+    gradeSelector.addEventListener('change', () => {
+        renderSubjectSettings();
+        renderTable(); 
+        autoSave();
+    });
+
+    document.addEventListener('copy', (e) => {
+        const selected = document.querySelectorAll('.input-cell.selected');
+        if (selected.length > 0) {
+            e.preventDefault();
+            let text = Array.from(selected).map(el => el.value).join('\n');
+            e.clipboardData.setData('text/plain', text);
+            showStatus("選択範囲をコピーしました");
+        }
+    });
+
+    document.addEventListener('paste', (e) => {
+        const active = document.activeElement;
+        if (active && active.classList.contains('input-cell')) {
+            e.preventDefault();
+            const text = e.clipboardData.getData('text/plain');
+            const rows = text.split(/\r?\n/);
+            const startR = parseInt(active.dataset.row);
+            rows.forEach((val, i) => {
+                const currentIdx = getColIndex(active.dataset.col);
+                const targetColName = getColName(currentIdx);
+                const target = document.querySelector(`.input-cell[data-row="${startR + i}"][data-col="${targetColName}"]`);
+                if (target) {
+                    target.value = val;
+                    if (startR + i > headerRowsCount && startR + i < rowCount - 1 && target.classList.contains('cell-score')) {
+                        manualEditFlags[`${startR + i}-${targetColName}`] = true;
+                    }
+                    target.dispatchEvent(new Event('input'));
+                }
+            });
+            showStatus("貼り付けました");
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isSelecting = false;
+        const table = document.getElementById('gradeTable');
+        if (table) table.classList.remove('selecting');
+    });
+
+    function showSuccess() {
+        soundCorrect.play();
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    }
+
+    function copyTableData() {
+        const rows = document.querySelectorAll('#gradeTable tr');
+        let tsv = "";
+        rows.forEach((row, i) => {
+            if (i === 0) return;
+            const rowData = [];
+            row.querySelectorAll('input, select').forEach(inp => rowData.push(inp.value));
+            tsv += rowData.join('\t') + '\n';
+        });
+        const temp = document.createElement('textarea');
+        temp.value = tsv;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        showStatus("全データをコピーしました");
+    }
+
+    function showStatus(msg) {
+        statusMsg.textContent = msg;
+        statusMsg.style.display = 'block';
+        setTimeout(() => { statusMsg.style.display = 'none'; }, 3000);
+    }
+
+    async function resetApp() {
+        if (confirm("入力をすべてリセットしてもよろしいですか？")) {
+            cellDataStorage = {};
+            manualEditFlags = {};
+            startColIdx = 2;
+            termSelector.value = "1学期";
+            gradeSelector.value = "1";
+            subjectSettings = {
+                "国語": { "知識": "100", "思考": "100" },
+                "社会": { "知識": "100", "思考": "50" },
+                "算数": { "知識": "100", "思考": "50" },
+                "理科": { "知識": "100", "思考": "50" },
+                "生活": { "知識": "100", "思考": "50" }
+            };
+            if (lastUser) {
+                const stateRef = doc(db, 'artifacts', appId, 'users', lastUser.uid, 'appState', 'current');
+                await setDoc(stateRef, {
+                    cellDataStorage: {},
+                    manualEditFlags: {},
+                    startColIdx: 2,
+                    term: "1学期",
+                    grade: "1",
+                    subjectSettings,
+                    updatedAt: new Date()
+                });
+            }
+            renderSubjectSettings();
+            renderTable();
+            showStatus("リセットしました");
+        }
+    }
+
+    // グローバル公開
+    window.copyTableData = copyTableData;
+    window.resetApp = resetApp;
+    window.moveColumns = moveColumns;
+    window.switchTab = switchTab;
+    window.toggleAuthModal = toggleAuthModal;
+    window.handleEmailLogin = handleEmailLogin;
+    window.handleEmailRegister = handleEmailRegister;
+
+    window.onload = initTable;
+</script>
+
+</body>
+</html>
